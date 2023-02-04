@@ -1,0 +1,1 @@
+@"C:\Users\janni\anaconda3\envs\medicalblockchain\python.exe" "C:\Users\janni\sciebo\Uni\Master\MedicalBlockchain\MB\__main__.py" %*
