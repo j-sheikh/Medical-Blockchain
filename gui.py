@@ -14,15 +14,15 @@ from tkinter import filedialog
 from PIL import Image
 import pandas as pd
 import io
+import gzip
+import socket
 
-
-
-
+gitkey_path = r'C:\Users\janni\Documents\Stuff\git_blockchain.txt'
 class SharingDoc:
     def __init__(self, sys_argv):
         self.root = tk.Tk()
-        self.ip = "127.0.0.1"
-        self.port = 9875
+        # self.ip = "127.0.0.1"
+        # self.port = 9875
         self.load_user_dict()
         self.privkey = None
         self.pubkey =  None
@@ -68,8 +68,9 @@ class SharingDoc:
         
     def get_my_data(self, blocks):
            
-        
         view_data_window = tk.Toplevel(main_window)
+        view_data_window.lift()
+        view_data_window.attributes("-topmost", True)
         view_data_window.title("View Data")
         message_label = tk.Label(view_data_window, text="Your data: ")
         message_label.pack()
@@ -84,7 +85,8 @@ class SharingDoc:
                     if k == 'data':
                         message = f"\n\n================\n\nAdded: {blocks[current_block].header['timestamp']}\n{value}"
                     else:
-                        decoded = rsa.decrypt(value, self.privkey)
+
+                        decoded = rsa.decrypt(value[0], self.privkey)
                         message = f"\n\n================\n\nAdded: {blocks[current_block].header['timestamp']}\n{decoded.decode('ascii')}"
 
             message_entry.delete("1.0", tk.END)
@@ -135,17 +137,37 @@ class SharingDoc:
         login_window.attributes("-topmost", True)
         login_window.title("SharingDoc LogIn")
         login_window.geometry("600x500")
+        
         self.username_label = tk.Label(login_window, text="Username:")
         self.username_entry = tk.Entry(login_window)
+
         self.password_label = tk.Label(login_window, text="Password:")
         self.password_entry = tk.Entry(login_window, show="*")
+
+        
+        self.ip_label = tk.Label(login_window, text="IP-Adress:")
+        self.ip_entry = tk.Entry(login_window)
+
+        self.port_label = tk.Label(login_window, text="Port:")
+        self.port_entry = tk.Entry(login_window)
+
+        
         self.login_button = tk.Button(login_window, text="Login", command=self.login)
         self.for_pw_button = tk.Button(login_window, text="Forgot Password", command=self.forgot_password)
         self.signup_button = tk.Button(login_window, text="Sign-Up", command=self.signup)
+        
+        
         self.username_label.pack()
         self.username_entry.pack()
         self.password_label.pack()
         self.password_entry.pack()
+        
+        self.ip_label.pack()
+        self.ip_entry.pack()  
+        self.port_label.pack()
+        self.port_entry.pack()
+        
+        
         self.login_button.pack()
         self.for_pw_button.pack()
         self.signup_button.pack()
@@ -153,6 +175,8 @@ class SharingDoc:
 
     def send_message(self):
         checkbox_window = tk.Toplevel(main_window)
+        checkbox_window.lift()
+        checkbox_window.attributes("-topmost", True)
         checkbox_window.title("Send Message: ")
         message_label = tk.Label(checkbox_window, text="Enter message:")
         message_label.pack()
@@ -195,7 +219,9 @@ class SharingDoc:
     def build_main_gui(self):
         global main_window
         main_window = tk.Toplevel(self.root)
-        main_window.title(f"Welcome {self.user}")
+        main_window.lift()
+        main_window.attributes("-topmost", True)
+        main_window.title(f"Welcome {self.user} -- {self.port}")
       
         
         # Create the taskbar frame on the right side
@@ -251,10 +277,12 @@ class SharingDoc:
     def add_to_chain(self):
         add_window = tk.Toplevel(main_window)
         add_window.title("Add data to chain: ")
+        add_window.lift()
+        add_window.attributes("-topmost", True)
         message_label = tk.Label(add_window, text="Enter data or upload file:")
         message_label.pack()
         message_entry = tk.Text(add_window,  height=10, width=40)
-        message_entry.pack()
+        message_entry.pack(expand=True, fill='both')
         
         checkbox_vars = []
         users = list(self.user_dict.keys())
@@ -289,7 +317,7 @@ class SharingDoc:
                         new_receivers.append('ALL')
                     else:
                         pub_key = self.user_dict[rec]['public_key']
-                        encData = rsa.encrypt(data.encode('ascii'), pub_key)
+                        encData = rsa.encrypt(data.encode('utf-8'), pub_key)
                         new_data.append(encData)
                         new_unames.append(rec)
                         new_receivers.append(str(pub_key))
@@ -318,14 +346,19 @@ class SharingDoc:
                 with open(file_path, 'rb') as file:
                     if extension == 'csv':
                         df = pd.read_csv(file)
-                        contents = df.to_json()
+                        contents = df.to_json().encode('utf-8')
+                        contents = gzip.compress(contents)
                     elif extension == 'json':
                         contents = file.read()
+                        contents = gzip.compress(contents)
                     elif extension in ['jpg', 'jpeg', 'png']:
                         image = Image.open(file)
+                        size = (28, 28)
+                        resized_image = image.resize(size)
                         buffer = io.BytesIO()
-                        image.save(buffer, format="PNG")
+                        resized_image.save(buffer, format="PNG")
                         contents = base64.b64encode(buffer.getvalue()).decode()
+                        contents = gzip.compress(contents.encode('utf-8'))
                     else:
                         raise Exception("Unsupported file type")
                     message_entry.delete("1.0", tk.END)
@@ -353,6 +386,8 @@ class SharingDoc:
         # create a new window
         global fp_window
         fp_window = tk.Toplevel(self.root)
+        fp_window.lift()
+        fp_window.attributes("-topmost", True)
         fp_window.title("Forgot Password")
         fp_window.geometry("400x200+100+100")
     
@@ -475,6 +510,8 @@ class SharingDoc:
         # create a new window
         global sp_window
         sp_window = tk.Toplevel(self.root)
+        sp_window.lift()
+        sp_window.attributes("-topmost", True)
         sp_window.title("Sign-Up")
         sp_window.geometry("400x400+100+100")
         
@@ -572,12 +609,16 @@ class SharingDoc:
                 
             (pubkey, privkey) = rsa.newkeys(1024)
             
-            with open('public.pem', 'wb+') as f:
+            directory = "keys"
+            if not os.path.exists(directory):
+               os.makedirs(directory)
+               
+            with open('keys/public.pem', 'wb+') as f:
                 pk = pubkey.save_pkcs1('PEM')
                 f.write(pk)
                 
             
-            with open('private.pem', 'wb+') as f:
+            with open('keys/private.pem', 'wb+') as f:
                 pk = privkey.save_pkcs1('PEM')
                 f.write(pk)
             
@@ -593,10 +634,9 @@ class SharingDoc:
             self.upload_user_dict()
             
             tk.messagebox.showinfo("Info", "You have successfully signed up.")
-            time.sleep(5)
-            sp_window.destroy()
-            
+            time.sleep(2)
             self.load_user_dict()
+            sp_window.destroy()
         # create the "Save" button and set it to be hidden by default
         save_button = tk.Button(sp_window, text="Save", state="disabled", command= lambda: save_userdata(username_entry.get(), password_entry.get(), security_question_answer_entry.get()))
         
@@ -622,10 +662,24 @@ class SharingDoc:
         uname = self.username_entry.get()
         password = self.password_entry.get()
         
+        if self.ip_entry.get():
+            self.ip = int(self.ip_entry.get())
+        else:
+            host_name = socket.gethostname()
+            host_ip = socket.gethostbyname(host_name)
+            self.ip = host_ip
+        
+        if self.port_entry.get():
+            self.port = self.port_entry.get()
+        else:
+            self.port = 9875
+            
         if not self.user_dict or uname not in self.user_dict:
             
             self.username_entry.delete(0, 'end')
             self.password_entry.delete(0, 'end')
+            self.ip_entry.delete(0, 'end')
+            self.port_entry.delete(0, 'end')
             tk.messagebox.showerror("Login", "Username does not exist", parent=login_window)
 
         else:    
@@ -633,7 +687,7 @@ class SharingDoc:
             key = self.user_dict[uname]['key_pw']
             new_key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
             if key != new_key:
-                self.username_entry.delete(0, 'end')
+                # self.username_entry.delete(0, 'end')
                 self.password_entry.delete(0, 'end')
                 tk.messagebox.showerror("Login", "Incorrect password", parent=login_window)
                 
@@ -753,13 +807,13 @@ class SharingDoc:
         # self.main()
                 
     def load_private_key(self):
-        with open('private.pem', mode='rb') as privatefile:
+        with open('keys/private.pem', mode='rb') as privatefile:
             keydata = privatefile.read()
         self.privkey = rsa.PrivateKey.load_pkcs1(keydata)
 
 
     def load_public_key(self):
-        with open('public.pem', mode='rb') as publicfile:
+        with open('keys/public.pem', mode='rb') as publicfile:
             keydata = publicfile.read()
         self.pubkey = rsa.PublicKey.load_pkcs1(keydata)
     
@@ -779,7 +833,7 @@ class SharingDoc:
     def upload_user_dict(self):
         
         def load_git_token():
-            with open(r'C:\Users\janni\Documents\Stuff\git_blockchain.txt', 'r') as f:
+            with open(gitkey_path, 'r') as f:
                 return f.read()
             
         # your Github token

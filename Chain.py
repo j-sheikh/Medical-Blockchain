@@ -119,21 +119,21 @@ class Chain():
             self.message_callback(self.blocks)
 
 
+
     def display_last_block(self):
         self.print_block(self.blocks[-1])
 
 
     def search_chain_for_data(self):
-        print("SEARCHING")
-        print(self.pubkey)
+        # print("SEARCHING")
+        # print(self.pubkey)
         blocks = []
         for _, block in enumerate(self.blocks):
-            print(block.header['receiver'])
-            if self.pubkey in block.header['receiver'] or 'ALL' in block.header['receiver']:
-                print(True)
+            # print(block.header['receiver'])
+            if f'{self.pubkey}' in block.header['receiver'] or 'ALL' in block.header['receiver']:
                 if block not in blocks:
                     blocks.append(block)
-        print(len(blocks))
+        # print(len(blocks))
         if self.my_data_callback and blocks:
 
             self.my_data_callback(blocks)
