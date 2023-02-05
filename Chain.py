@@ -20,12 +20,17 @@ class Chain():
         self.create_origin_block()
         self.message_callback = None
         self.my_data_callback = None
+        self.status_callback  = None
+
+
+    def set_satus_callback(self, callback):
+        self.status_callback = callback
         
     def set_pubkey(self, pubkey):
         self.pubkey = pubkey
         
     def set_my_data_callback(self, callback):
-        self.my_data_callback = callback
+        self.my_data_callback = callback         
         
     def set_message_callback(self, callback):
         self.message_callback = callback 
@@ -44,14 +49,21 @@ class Chain():
             # self.blockchain.append(block)
             self.blocks.append(block)
             
+            if self.status_callback:
+                message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tData added to chain.'
+                self.status_callback(message)
+            
             #reset pools
             self.receiver_pool = []
             self.pool = []
-            print('DATA added to CHAIN!')
+            # print('DATA added to CHAIN!')
             # self.chain_changed
 
         else:
-            print('Proof of work not correct!')
+            if self.status_callback:
+                message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tFailed to add data to chain. Reason: Proof of work not correct'
+                self.message_callback(message)
+            # print('Proof of work not correct!')
             
             
     def check_block(self, block_index):
@@ -81,12 +93,8 @@ class Chain():
         
 
     def add_to_pool(self, data, receiver):
-        # time.sleep(1)
-        
-        #first time calling add_to_pool init rt
-        # print(receiver)
+
         if len(self.pool) == 0:
-            print('set repeater')
             global rt
             rt = RepeatedTimer(10, self.mine) #change to 600 -> 10min
                      
@@ -94,14 +102,13 @@ class Chain():
         
         self.add_receiver(receiver)
         
+        if self.status_callback:
+            message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tProcess started to add data to the chain. May take up to 10 minutes.'
+            self.status_callback(message)
+        
         if len(self.pool) == 4:
-            print("MORE THAN 4")
             self.mine
             
-    def stop_repeater(self):
-        rt.stop()
-        print('REPEATER STOPPED!')
-
         
         
     def create_origin_block(self):
@@ -157,11 +164,11 @@ class Chain():
         
         #sanity check
         if len(self.pool) > 0:
-            print('\nMINE')
-            print("LEN POOL", len(self.pool))
+            # print('\nMINE')
+            # print("LEN POOL", len(self.pool))
             
             rt.stop()
-            print('repeater stopped')
+            # print('repeater stopped')
             
 
             block = Block(self.pool, self.blocks[-1].header['hash'], self.receiver_pool, timestamp= time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time())))
@@ -172,7 +179,10 @@ class Chain():
                 self.add_to_chain(block)     
             
             else:
-                print('merkle_root failed.')        
+                if self.status_callback:
+                    message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tFailed to add data to pool. Reason: Merkle root did not match.'
+                    self.status_callback(message)
+                # print('merkle_root failed.')        
             
             
         else:

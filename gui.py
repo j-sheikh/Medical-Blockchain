@@ -37,7 +37,10 @@ class SharingDoc:
             self.port = int(sys_argv[2])
 
         self.root.iconify()
-        self.main()    
+        self.main()   
+        
+    def status_adding_data(self, message):
+        self.text_area.insert(tk.END, message)
    
     def share_pubkey(self):
         if self.my_pubkey_callback:
@@ -269,7 +272,7 @@ class SharingDoc:
               
         # Add a text area on the left side
         self.text_area = tk.Text(main_window, bg="white", height=30, width=80)
-        self.text_area.pack(side="left")
+        self.text_area.pack(fill = 'both', expand = True, side="left")
      
         main_window.after(100, refresh_send_message_button)   
 
@@ -334,7 +337,8 @@ class SharingDoc:
         message_entry.bind("<Key>", on_data_entry_change)
         message_entry.bind("<Button-1>", on_data_entry_change)
         
-        add_button = tk.Button(add_window, text="Add", state = "disabled", command=lambda: (self.node.chain.add_to_pool(encrypt_data()[0], encrypt_data()[1]), add_window.destroy()))
+        add_button = tk.Button(add_window, text="Add", state = "disabled", command=lambda: (self.node.chain.add_to_pool(encrypt_data()[0], encrypt_data()[1]),
+                                                                                            add_window.destroy()))
         add_button.pack()
         
         def upload_file():
@@ -707,6 +711,7 @@ class SharingDoc:
                 self.node.set_message_inbound_disconnect(self.inbound_disconnect_message)
                 self.node.chain.set_message_callback(self.chain_data)
                 self.node.chain.set_my_data_callback(self.get_my_data)
+                self.node.chain.set_satus_callback(self.status_adding_data)
 
                 self.build_main_gui()
 
