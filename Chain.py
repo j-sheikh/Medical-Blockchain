@@ -2,7 +2,7 @@
 """
 Created on Fri Oct 21 12:13:02 2022
 
-@author: hikth
+@author: Jannik Sheikh
 """
 import hashlib
 import time
@@ -21,10 +21,15 @@ class Chain():
         self.message_callback = None
         self.my_data_callback = None
         self.status_callback  = None
-
+        self.get_foreign_block_callback = None
+        self.status_callback_added = None
+    
 
     def set_satus_callback(self, callback):
         self.status_callback = callback
+    
+    def set_satus_callback_block(self, callback):
+        self.status_callback_added = callback
         
     def set_pubkey(self, pubkey):
         self.pubkey = pubkey
@@ -52,6 +57,9 @@ class Chain():
             if self.status_callback:
                 message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tData added to chain.'
                 self.status_callback(message)
+                
+            if self.status_callback_added:
+                self.status_callback_added(block)
             
             #reset pools
             self.receiver_pool = []
@@ -61,7 +69,7 @@ class Chain():
 
         else:
             if self.status_callback:
-                message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tFailed to add data to chain. Reason: Proof of work not correct'
+                message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tFailed to add data to chain. Reason: Proof of work not correct.'
                 self.message_callback(message)
             # print('Proof of work not correct!')
             
@@ -70,8 +78,13 @@ class Chain():
         block = self.chain[block_index]
         return block.check_merkle_root()
   
-    # def add_foreign_Block(self, dict):
-    #     self.blockchain.append(dict)
+    def add_foreign_block(self, block):
+        print('in add_foreign_block in chain')
+        if(block != self.blocks[-1]):
+            self.blocks.append(block)
+            if self.status_callback:
+                message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tForeign block is added.'
+                self.set_satus_callback(message)
     
     
     def match_receiver_data_length(self, receiver, length):  
@@ -97,7 +110,8 @@ class Chain():
         if len(self.pool) == 0:
             global rt
             rt = RepeatedTimer(10, self.mine) #change to 600 -> 10min
-                     
+        if len(receiver) == 1:   
+            data = data[0]
         self.pool.append(data)
         
         self.add_receiver(receiver)

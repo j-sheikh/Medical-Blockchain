@@ -11,7 +11,6 @@ from MerkleTree import MerkleTree
 class Block():
     def __init__(self, data, previous_hash,  receiver, timestamp):
 
-
         if not isinstance(data, list):
             data = [data]
             
@@ -22,7 +21,7 @@ class Block():
         self.header = {"hash": hashlib.sha256(), "previous_hash": previous_hash, 'merkle_root': self.Merkle_Tree.merkle_root, "nonce": 0, 
                         "receiver": receiver, "timestamp": timestamp}
         
-        
+
         # self.body = {f'data_{receiver[i]}': data[i] for i in range(len(data))} if len(data) > 1 else {'data': data[0]}
         self.body = {f'data_{receiver[i]}': data[i] for i in range(len(data))} if len(data) > 1 else {'data': data[0]} if receiver[0] == 'ALL' else {f'data_{receiver[0]}': data[0]}
         

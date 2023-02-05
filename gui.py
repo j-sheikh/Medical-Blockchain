@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Oct 19 10:32:43 2022
+
+@author: Jannik Sheikh
+
+"""
 import tkinter as tk
 import rsa
 from myp2pnode import MyOwnPeer2PeerNode
@@ -38,7 +45,16 @@ class SharingDoc:
 
         self.root.iconify()
         self.main()   
-        
+     
+     
+    def foreign_block(self, block):  
+        if self.node.nodes_inbound:
+            for n in self.node.nodes_inbound:
+                    self.node.send_to_node(n, block)
+        if self.node.nodes_outbound:            
+            for n in self.node.nodes_outbound:
+                    self.node.send_to_node(n, block)        
+     
     def status_adding_data(self, message):
         self.text_area.insert(tk.END, message)
    
@@ -47,15 +63,15 @@ class SharingDoc:
             self.message_callback(self.pubkey)
     
     def receive_message(self, node, data):
-        message = f"\nFrom {node.id}: {data}"
+        message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tFrom {node.id}: {data}'
         self.text_area.insert(tk.END, message)
-        
+               
     def inbound_message(self, node):
-        message = f"You are now connected with the following node: {node.id}"
+        message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tYou are now connected with the following node: {node.id}'
         self.text_area.insert(tk.END, message)
         
     def inbound_disconnect_message(self, node):
-        message = f"You are now disconnected with the following node: {node.id}"
+        message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tYou are now disconnected with the following node: {node.id}'
         self.text_area.insert(tk.END, message)
 
 
@@ -85,6 +101,7 @@ class SharingDoc:
             for k in blocks[current_block].body.keys():
                 if k in ['data', f'data_{self.pubkey}']:
                     value = blocks[current_block].body[k]
+                    print(value)
                     if k == 'data':
                         message = f"\n\n================\n\nAdded: {blocks[current_block].header['timestamp']}\n{value}"
                     else:
@@ -312,11 +329,12 @@ class SharingDoc:
             
             receivers = get_receivers(users=users)
             data = message_entry.get("1.0", "end")
+           
             for rec in receivers:
                 if rec not in new_unames:
                     if rec == 'ALL':
                         new_data.append(data)
-                        new_unames.append('ALL')
+                        new_unames.append(rec)
                         new_receivers.append('ALL')
                     else:
                         pub_key = self.user_dict[rec]['public_key']
@@ -324,8 +342,9 @@ class SharingDoc:
                         new_data.append(encData)
                         new_unames.append(rec)
                         new_receivers.append(str(pub_key))
-                        
+         
             return new_data, new_receivers    
+        
         
         def on_data_entry_change(*args):
             data = message_entry.get("1.0", "end")
@@ -337,8 +356,8 @@ class SharingDoc:
         message_entry.bind("<Key>", on_data_entry_change)
         message_entry.bind("<Button-1>", on_data_entry_change)
         
-        add_button = tk.Button(add_window, text="Add", state = "disabled", command=lambda: (self.node.chain.add_to_pool(encrypt_data()[0], encrypt_data()[1]),
-                                                                                            add_window.destroy()))
+        # enc_data, rec = encrypt_data()
+        add_button = tk.Button(add_window, text="Add", state = "disabled", command=lambda: (self.node.chain.add_to_pool(*encrypt_data()), add_window.destroy()))
         add_button.pack()
         
         def upload_file():
@@ -424,7 +443,8 @@ class SharingDoc:
                 new_key = hashlib.pbkdf2_hmac('sha256', new_password.encode('utf-8'), new_salt, 100000)
                 self.user_dict[username]['key_pw'] = new_key
                 self.user_dict[username]['salt_pw'] = new_salt
-                self.upload_user_dict()
+                # self.upload_user_dict()
+                self.save_user_dict()
                
                 tk.messagebox.showinfo("Info", "Password saved")
                 pc_window.destroy()
@@ -635,7 +655,8 @@ class SharingDoc:
                                 
             }
             
-            self.upload_user_dict()
+            # self.upload_user_dict()
+            self.save_user_dict()
             
             tk.messagebox.showinfo("Info", "You have successfully signed up.")
             time.sleep(2)
@@ -667,14 +688,15 @@ class SharingDoc:
         password = self.password_entry.get()
         
         if self.ip_entry.get():
-            self.ip = int(self.ip_entry.get())
+            self.ip = self.ip_entry.get()
         else:
             host_name = socket.gethostname()
             host_ip = socket.gethostbyname(host_name)
             self.ip = host_ip
         
         if self.port_entry.get():
-            self.port = self.port_entry.get()
+            self.port = int(self.port_entry.get())
+            
         else:
             self.port = 9875
             
@@ -712,12 +734,14 @@ class SharingDoc:
                 self.node.chain.set_message_callback(self.chain_data)
                 self.node.chain.set_my_data_callback(self.get_my_data)
                 self.node.chain.set_satus_callback(self.status_adding_data)
-
+                self.node.chain.set_satus_callback_block(self.foreign_block)
                 self.build_main_gui()
 
     def disconnect(self):
                     
         disconnect_window = tk.Toplevel(main_window)
+        disconnect_window.lift()
+        disconnect_window.attributes("-topmost", True)
         disconnect_window.title("Disconnect with other node")
         disconnect_window.geometry("400x400")
         
@@ -737,7 +761,7 @@ class SharingDoc:
             return receivers
 
         disconnect_button = tk.Button(disconnect_window, text="Disconnect", state = "disabled", command=lambda: (self.node.disconnect_with_node(get_receivers()),
-                                                                                                   self.text_area.insert(tk.END, f"\nYou are now disconnected with: {i for i in get_receivers()}"),
+                                                                                                   self.text_area.insert(tk.END, f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tYou are now disconnected with: {i for i in get_receivers()}'),
                                                                                                    disconnect_window.destroy()))
 
         def validate():
@@ -758,6 +782,8 @@ class SharingDoc:
 
             
         connect_window = tk.Toplevel(main_window)
+        connect_window.lift()
+        connect_window.attributes("-topmost", True)
         connect_window.title("Connect with other node")
         connect_window.geometry("400x400")
         
@@ -765,7 +791,7 @@ class SharingDoc:
         ip_label = tk.Label(connect_window, text="IP Adress:")
         ip_entry = tk.Entry(connect_window)
         
-        port_label = tk.Label(connect_window, text="PORT:")
+        port_label = tk.Label(connect_window, text="Port:")
         port_entry = tk.Entry(connect_window)
         
         ip_label.pack()
@@ -782,7 +808,7 @@ class SharingDoc:
 
             if connected:
                 target_node = list(self.node.connected_users.keys())[-1]    
-                message = f"You are now connected with the following node: {target_node}"
+                message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tYou are now connected with the following node: {target_node}'
                 self.text_area.insert(tk.END, message)
                 connect_window.destroy()
             else:
@@ -822,17 +848,17 @@ class SharingDoc:
             keydata = publicfile.read()
         self.pubkey = rsa.PublicKey.load_pkcs1(keydata)
     
-    # def save_user_dict(self):
+    def save_user_dict(self):
 
-    #     with open('users.pickle', 'wb') as f:
-    #         pickle.dump(self.user_dict, f, protocol=pickle.HIGHEST_PROTOCOL)  
+        with open('users.pickle', 'wb') as f:
+            pickle.dump(self.user_dict, f, protocol=pickle.HIGHEST_PROTOCOL)  
      
-    # def load_user_dict(self):
-    #     try:
-    #         with open('users.pickle', 'rb') as f:
-    #             self.user_dict = pickle.load(f)   
-    #     except:
-    #         self.user_dict = {}     
+    def load_user_dict(self):
+        try:
+            with open('users.pickle', 'rb') as f:
+                self.user_dict = pickle.load(f)   
+        except:
+            self.user_dict = {}     
             
             
     def upload_user_dict(self):
@@ -903,17 +929,18 @@ class SharingDoc:
 
             
     
-    def load_user_dict(self):
+    # def load_user_dict(self):
         
-        url = "https://api.github.com/repos/j-sheikh/Medical-Blockchain/contents/users.pickle"
+    #     import requests
+    #     url = "https://api.github.com/repos/j-sheikh/Medical-Blockchain/contents/users.pickle"
 
-        response = requests.get(url)
+    #     response = requests.get(url)
 
-        if response.status_code == 200:
-            contents = response.json()["content"]
-            decoded_content = base64.b64decode(contents)
-            self.user_dict = pickle.loads(decoded_content)
-        else:
-            print('Error')
-            self.user_dict = {}
+    #     if response.status_code == 200:
+    #         contents = response.json()["content"]
+    #         decoded_content = base64.b64decode(contents)
+    #         self.user_dict = pickle.loads(decoded_content)
+    #     else:
+    #         print('Error')
+    #         self.user_dict = {}
                         
