@@ -23,13 +23,14 @@ import pandas as pd
 import io
 import gzip
 import socket
+import re
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
 
 gitkey_path = r'C:\Users\janni\Documents\Stuff\git_blockchain.txt'
 class SharingDoc:
     def __init__(self, sys_argv):
         self.root = tk.Tk()
-        # self.ip = "127.0.0.1"
-        # self.port = 9875
         self.load_user_dict()
         self.privkey = None
         self.pubkey =  None
@@ -46,16 +47,40 @@ class SharingDoc:
         self.root.iconify()
         self.main()   
      
-     
-    def foreign_block(self, block):  
-        if self.node.nodes_inbound:
-            for n in self.node.nodes_inbound:
-                    self.node.send_to_node(n, block)
-        if self.node.nodes_outbound:            
-            for n in self.node.nodes_outbound:
-                    self.node.send_to_node(n, block)        
-     
+
+    def spread_block(self, block):  
+        
+        #have to transform private_key to pem 
+        #and have to transform encrypted data to string
+    
+        string_rec = []
+        for rec in block.header['receiver']:
+            if isinstance(rec, rsa.PublicKey):
+                pem = rec.public_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PublicFormat.SubjectPublicKeyInfo
+                )
+                string_representation = "KEY:" + pem.decode('utf-8')
+                string_rec.append(string_representation)
+            else:
+                string_rec.append(rec)
+                
+        block.header['receiver'] = string_rec
+        
+        
+        
+        for key in block.body:
+            if isinstance(block.body[key], bytes):
+                print("IS BYTE")
+                base64_encoded_data = base64.b64encode(block.body[key]).decode('utf-8')
+                block.body[key] = 'BYTES:' + base64_encoded_data
+
+             
+        new_block_dict = {'header': block.header, 'body': block.body}   
+        self.node.node_message(self.node, new_block_dict)
+
     def status_adding_data(self, message):
+        print(message)
         self.text_area.insert(tk.END, message)
    
     def share_pubkey(self):
@@ -86,6 +111,7 @@ class SharingDoc:
         self.text_area.insert(tk.END, end_message)
         
     def get_my_data(self, blocks):
+        
            
         view_data_window = tk.Toplevel(main_window)
         view_data_window.lift()
@@ -96,55 +122,65 @@ class SharingDoc:
         message_entry = tk.Text(view_data_window,  height=10, width=40)
         message_entry.pack(fill='both', expand=True)
 
-        current_block = 0
+        # create a list of all keys that match the conditions
+        relevant_keys = []
+        pattern = re.compile(r"^data_ALL_")
+        for b in blocks:
+            for k in b.body.keys():
+                if k in ['data', f'data_{self.pubkey}', 'data_ALL'] or pattern.match(k):
+                    relevant_keys.append((b, k))
+        current_key_index = 0
         def display_block(current_block):
-            for k in blocks[current_block].body.keys():
-                if k in ['data', f'data_{self.pubkey}']:
-                    value = blocks[current_block].body[k]
-                    print(value)
-                    if k == 'data':
-                        message = f"\n\n================\n\nAdded: {blocks[current_block].header['timestamp']}\n{value}"
-                    else:
-
-                        decoded = rsa.decrypt(value[0], self.privkey)
-                        message = f"\n\n================\n\nAdded: {blocks[current_block].header['timestamp']}\n{decoded.decode('ascii')}"
+            b, k = relevant_keys[current_block]
+            value = b.body[k]
+            if k == f'data_{self.pubkey}':
+                print('IT IS SELF_KEY')
+                decoded = rsa.decrypt(value, self.privkey)
+                print(decoded.decode('ascii'))
+                print(decoded.decode('utf-8'))
+                message = f"\n\n================\n\nAdded: {b.header['timestamp']}\n{decoded.decode('ascii')}"
+            else:
+                print('IT IS NOT SELF_KEY')
+                message = f"\n\n================\n\nAdded: {b.header['timestamp']}\n{value}"
 
             message_entry.delete("1.0", tk.END)
             message_entry.insert(tk.END, message)
 
-        display_block(current_block)
+        display_block(current_key_index)
 
-        next_button = tk.Button(view_data_window, text="Next", command=lambda: display_block(current_block))
-        next_button.pack()
-        prev_button = tk.Button(view_data_window, text="Previous", state = 'disable', command=lambda: display_block(current_block))
-        prev_button.pack()
+
 
         def on_next():
-            nonlocal current_block
-            current_block += 1
-            if current_block >= len(blocks):
-                current_block = len(blocks) - 1
-            display_block(current_block)
-            if current_block == len(blocks) - 1:
+            nonlocal current_key_index
+            current_key_index += 1
+            if current_key_index >= len(relevant_keys):
+                current_key_index = len(relevant_keys) - 1
+                # next_button.config(state='disabled')
+            display_block(current_key_index)
+            if current_key_index == len(relevant_keys) - 1:
                 next_button.config(state='disabled')
-            prev_button.config(state='normal')
+            if current_key_index > 0:
+                prev_button.config(state='normal')
 
         def on_prev():
-            nonlocal current_block
-            current_block -= 1
-            if current_block < 0:
-                current_block = 0
-            display_block(current_block)
-            if current_block == 0:
+            nonlocal current_key_index
+            current_key_index -= 1
+            if current_key_index < 0:
+                current_key_index = 0
+            display_block(current_key_index)
+            if current_key_index == 0:
                 prev_button.config(state='disabled')
-            next_button.config(state='normal')
-
-        next_button.config(command=on_next)
-        prev_button.config(command=on_prev)
-
-        if len(blocks) == 1:
+            if current_key_index < len(relevant_keys) - 1:
+                next_button.config(state='normal')
+                
+                
+        next_button = tk.Button(view_data_window, text="Next",  command= on_next)
+        next_button.pack()
+        if len(relevant_keys) == 1:
             next_button.config(state='disabled')
-            prev_button.config(state='disabled')
+        prev_button = tk.Button(view_data_window, text="Previous", state = 'disable', command=on_prev)
+        prev_button.pack()
+
 
     def main(self):
         self.build_login_gui()
@@ -219,7 +255,7 @@ class SharingDoc:
             return receivers
 
         send_button = tk.Button(checkbox_window, text="Send", state = "disabled", command=lambda: (self.node.node_send_private_message(message_entry.get("1.0", "end"), get_receivers()),
-                                                                                                   self.text_area.insert(tk.END, f'\n{self.node.id}: {message_entry.get("1.0", "end")}'),
+                                                                                                   self.text_area.insert(tk.END,f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\t{self.node.id}: {message_entry.get("1.0", "end")}'),
                                                                                                    checkbox_window.destroy()))
 
         def validate():
@@ -241,7 +277,7 @@ class SharingDoc:
         main_window = tk.Toplevel(self.root)
         main_window.lift()
         main_window.attributes("-topmost", True)
-        main_window.title(f"Welcome {self.user} -- {self.port}")
+        main_window.title(f"Welcome {self.user} -- {self.ip} -- {self.port}")
       
         
         # Create the taskbar frame on the right side
@@ -270,8 +306,8 @@ class SharingDoc:
         connect_button.pack(fill="x")
         
         
-        disconnect_button = tk.Button(taskbar, text="Disconnect", command= self.disconnect)
-        disconnect_button.pack(fill='x')
+        # disconnect_button = tk.Button(taskbar, text="Disconnect", command= self.disconnect)
+        # disconnect_button.pack(fill='x')
         
         print_chain_button = tk.Button(taskbar, text="Print Chain", command=self.node.chain.display_chain)
         print_chain_button.pack(fill='x')
@@ -314,12 +350,25 @@ class SharingDoc:
             tk.Checkbutton(add_window, text=key, variable=checkbox_var).pack()
 
         def get_receivers(users=users):
-            receivers = []
+             receivers = []
 
-            for i, key in enumerate(users):
-                if checkbox_vars[i].get() == 1:
-                    receivers.append(key)
-            return receivers
+             all_selected = False
+             for i, key in enumerate(users):
+                 if key == 'ALL' and checkbox_vars[i].get() == 1:
+                     all_selected = True
+                     break
+            
+             for i, key in enumerate(users):
+                 if all_selected:
+                     if key == 'ALL':
+                         receivers.append(key)
+                         continue
+                     else:
+                         checkbox_vars[i].set(0)
+                 elif checkbox_vars[i].get() == 1:
+                     receivers.append(key)
+             print(receivers)
+             return receivers
         
         
         def encrypt_data(users=users):
@@ -342,7 +391,6 @@ class SharingDoc:
                         new_data.append(encData)
                         new_unames.append(rec)
                         new_receivers.append(str(pub_key))
-         
             return new_data, new_receivers    
         
         
@@ -352,7 +400,7 @@ class SharingDoc:
                 add_button.config(state="normal")
             else:
                 add_button.config(state="disabled")
-    
+        
         message_entry.bind("<Key>", on_data_entry_change)
         message_entry.bind("<Button-1>", on_data_entry_change)
         
@@ -394,15 +442,17 @@ class SharingDoc:
         upload_button.pack()
 
         def validate():
-            if len(get_receivers()) == 0 or len(message_entry.get("1.0", "end").strip()) == 0:
-                add_button.config(state="disabled")
-            else:
+            if len(get_receivers()) != 0 and len(message_entry.get("1.0", "end").strip()) != 0:
                 add_button.config(state="normal")
+            else:
+                add_button.config(state="disabled")
 
         message_entry.bind("<Key>", lambda e: validate())
         for checkbox_var in checkbox_vars:
             checkbox_var.trace("w", lambda *args: validate())
         add_button.pack()
+        
+
     
     
     def forgot_password(self):
@@ -655,12 +705,12 @@ class SharingDoc:
                                 
             }
             
-            # self.upload_user_dict()
-            self.save_user_dict()
+            self.upload_user_dict()
             
             tk.messagebox.showinfo("Info", "You have successfully signed up.")
             time.sleep(2)
-            self.load_user_dict()
+            self.load_user_dict_git()
+            # self.load_user_dict()
             sp_window.destroy()
         # create the "Save" button and set it to be hidden by default
         save_button = tk.Button(sp_window, text="Save", state="disabled", command= lambda: save_userdata(username_entry.get(), password_entry.get(), security_question_answer_entry.get()))
@@ -728,52 +778,58 @@ class SharingDoc:
                 self.node = MyOwnPeer2PeerNode(self.ip, self.port, self.user)
                 self.node.start()
                 self.node.chain.set_pubkey(self.pubkey)
+                
                 self.node.set_message_callback(self.receive_message)
                 self.node.set_message_inbound(self.inbound_message)
                 self.node.set_message_inbound_disconnect(self.inbound_disconnect_message)
+                # self.node.set_foreign_block_message_callback(self.foreign_block)
+                
+                
                 self.node.chain.set_message_callback(self.chain_data)
                 self.node.chain.set_my_data_callback(self.get_my_data)
                 self.node.chain.set_satus_callback(self.status_adding_data)
-                self.node.chain.set_satus_callback_block(self.foreign_block)
+                self.node.chain.set_add_block_callback(self.spread_block)
+                
+                
                 self.build_main_gui()
 
-    def disconnect(self):
+    # def disconnect(self):
                     
-        disconnect_window = tk.Toplevel(main_window)
-        disconnect_window.lift()
-        disconnect_window.attributes("-topmost", True)
-        disconnect_window.title("Disconnect with other node")
-        disconnect_window.geometry("400x400")
+    #     disconnect_window = tk.Toplevel(main_window)
+    #     disconnect_window.lift()
+    #     disconnect_window.attributes("-topmost", True)
+    #     disconnect_window.title("Disconnect with other node")
+    #     disconnect_window.geometry("400x400")
         
-        checkbox_vars = []
+    #     checkbox_vars = []
 
-        for key in self.node.connected_users.keys():
-            checkbox_var = tk.IntVar()
-            checkbox_vars.append(checkbox_var)
-            tk.Checkbutton(disconnect_window, text=key, variable=checkbox_var).pack()
+    #     for key in self.node.connected_users.keys():
+    #         checkbox_var = tk.IntVar()
+    #         checkbox_vars.append(checkbox_var)
+    #         tk.Checkbutton(disconnect_window, text=key, variable=checkbox_var).pack()
 
-        def get_receivers():
-            receivers = []
+    #     def get_receivers():
+    #         receivers = []
 
-            for i, key in enumerate(self.node.connected_users.keys()):
-                if checkbox_vars[i].get() == 1:
-                    receivers.append(key)
-            return receivers
+    #         for i, key in enumerate(self.node.connected_users.keys()):
+    #             if checkbox_vars[i].get() == 1:
+    #                 receivers.append(key)
+    #         return receivers
 
-        disconnect_button = tk.Button(disconnect_window, text="Disconnect", state = "disabled", command=lambda: (self.node.disconnect_with_node(get_receivers()),
-                                                                                                   self.text_area.insert(tk.END, f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tYou are now disconnected with: {i for i in get_receivers()}'),
-                                                                                                   disconnect_window.destroy()))
+    #     disconnect_button = tk.Button(disconnect_window, text="Disconnect", state = "disabled", command=lambda: (self.node.disconnect_with_node(get_receivers()),
+    #                                                                                                self.text_area.insert(tk.END, f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tYou are now disconnected with: {i for i in get_receivers()}'),
+    #                                                                                                disconnect_window.destroy()))
 
-        def validate():
-            if len(get_receivers()) == 0:
-                disconnect_button.config(state="disabled")
-            else:
-                disconnect_button.config(state="normal")
+    #     def validate():
+    #         if len(get_receivers()) == 0:
+    #             disconnect_button.config(state="disabled")
+    #         else:
+    #             disconnect_button.config(state="normal")
 
         
-        for checkbox_var in checkbox_vars:
-            checkbox_var.trace("w", lambda *args: validate())
-        disconnect_button.pack()
+    #     for checkbox_var in checkbox_vars:
+    #         checkbox_var.trace("w", lambda *args: validate())
+    #     disconnect_button.pack()
 
         
 
@@ -926,21 +982,23 @@ class SharingDoc:
         else:
             print("Error while checking if file exists")
         
+        self.save_user_dict()
+        
 
             
     
-    # def load_user_dict(self):
+    def load_user_dict_git(self):
         
-    #     import requests
-    #     url = "https://api.github.com/repos/j-sheikh/Medical-Blockchain/contents/users.pickle"
+        import requests
+        url = "https://api.github.com/repos/j-sheikh/Medical-Blockchain/contents/users.pickle"
 
-    #     response = requests.get(url)
+        response = requests.get(url)
 
-    #     if response.status_code == 200:
-    #         contents = response.json()["content"]
-    #         decoded_content = base64.b64decode(contents)
-    #         self.user_dict = pickle.loads(decoded_content)
-    #     else:
-    #         print('Error')
-    #         self.user_dict = {}
+        if response.status_code == 200:
+            contents = response.json()["content"]
+            decoded_content = base64.b64decode(contents)
+            self.user_dict = pickle.loads(decoded_content)
+        else:
+            print('Error')
+            self.load_user_dict()
                         

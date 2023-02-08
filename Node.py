@@ -11,7 +11,7 @@ import threading
 import random
 import hashlib
 
-from p2pnetwork.nodeconnection import NodeConnection
+from Nodeconnection import NodeConnection
 
 """
 Author: Maurice Snoeren <macsnoeren(at)gmail.com>
@@ -139,7 +139,10 @@ class Node(threading.Thread):
         """ Send the data to the node n if it exists."""
         self.message_count_send = self.message_count_send + 1
         if n in self.nodes_inbound or n in self.nodes_outbound:
+            print('IN SEND TO NODE IN NODE CLASS')
+            print(type(data))
             n.send(data, compression=compression)
+            print(" NOW IT SEND IT IN NODE CLASS; WOWOWOWOWOW")
 
         else:
             self.debug_print("Node send_to_node: Could not send the data, node is not found!")

@@ -8,6 +8,8 @@ import hashlib
 import time
 from  Block import Block
 from timer import RepeatedTimer
+import rsa
+import base64
 
 class Chain():
     def __init__(self, difficulty, callback = None):
@@ -18,18 +20,19 @@ class Chain():
         self.pubkey = None
         # self.blockchain = []
         self.create_origin_block()
+        
         self.message_callback = None
         self.my_data_callback = None
         self.status_callback  = None
-        self.get_foreign_block_callback = None
+        self.add_block_callback = None
         self.status_callback_added = None
-    
+               
+        
+    def set_add_block_callback(self, callback):
+        self.add_block_callback = callback
 
     def set_satus_callback(self, callback):
         self.status_callback = callback
-    
-    def set_satus_callback_block(self, callback):
-        self.status_callback_added = callback
         
     def set_pubkey(self, pubkey):
         self.pubkey = pubkey
@@ -43,8 +46,7 @@ class Chain():
     def proof_of_work(self, block):
         hash = hashlib.sha256()
         hash.update(str(block).encode())
-        return block.header["hash"].hexdigest() == hash.hexdigest() and int(hash.hexdigest(), 16) < 2**(256-self.difficulty) and block.header["previous_hash"] == self.blocks[-1].header["hash"]
-        
+        return block.header["hash"] == hash.hexdigest() and int(hash.hexdigest(), 16) < 2**(256-self.difficulty) and block.header["previous_hash"] == self.blocks[-1].header["hash"]
         
         
     def add_to_chain(self, block):
@@ -58,8 +60,8 @@ class Chain():
                 message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tData added to chain.'
                 self.status_callback(message)
                 
-            if self.status_callback_added:
-                self.status_callback_added(block)
+            if self.add_block_callback:
+                self.add_block_callback(block)
             
             #reset pools
             self.receiver_pool = []
@@ -79,12 +81,42 @@ class Chain():
         return block.check_merkle_root()
   
     def add_foreign_block(self, block):
-        print('in add_foreign_block in chain')
-        if(block != self.blocks[-1]):
-            self.blocks.append(block)
-            if self.status_callback:
-                message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tForeign block is added.'
-                self.set_satus_callback(message)
+        
+        def is_key_string(string):
+            # Check if the string starts with "KEY:"
+            if string.startswith("KEY:"):
+                return True
+            return False
+       
+        recover_rec = []
+        for rec in block['header']['receiver']:
+            if is_key_string(rec):
+                pubpem = rec.split('KEY:')[1]
+                recover_rec(rsa.PublicKey.load_pkcs1(pubpem.encode()))
+            else:
+                recover_rec.append(rec)
+       
+        block['header']['receiver'] = recover_rec
+        
+        
+        for key in block['body']:
+            if block['body'][key].startswith('BYTES:'):
+                base64_encoded_data = block['body'][key][6:]
+                decoded_bytes = base64.b64decode(base64_encoded_data)
+                block['body'][key] = decoded_bytes
+        
+        recover_block = Block(block['header'], block['body'], recover = True)
+        if(recover_block.header['hash'] != self.blocks[-1].header['hash']):
+            if self.proof_of_work(recover_block):
+                print("added")
+                self.blocks.append(recover_block)
+                if self.status_callback:
+                    message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tForeign block is added.'
+                    self.set_satus_callback(message)
+            else:
+                print('FOREIGN BLOCK PROOF OF WORK FAILED')
+        else:
+            print("DONT NEED TO ADD, HAVE IT")
     
     
     def match_receiver_data_length(self, receiver, length):  
@@ -110,10 +142,16 @@ class Chain():
         if len(self.pool) == 0:
             global rt
             rt = RepeatedTimer(10, self.mine) #change to 600 -> 10min
+            
+            
         if len(receiver) == 1:   
             data = data[0]
-        self.pool.append(data)
+            self.pool.append(data)
         
+        else:    
+            self.pool = self.pool + data
+      
+        # print(self.pool)
         self.add_receiver(receiver)
         
         if self.status_callback:
@@ -129,7 +167,7 @@ class Chain():
         h = hashlib.sha256()
         h.update(''.encode())
         
-        origin = Block(data = "Origin", previous_hash = h, receiver = 'ALL', timestamp=0)
+        origin = Block(data = "Origin", previous_hash = h.hexdigest(), receiver = 'ALL', timestamp=0)
         origin.mine(self.difficulty)
         
         
