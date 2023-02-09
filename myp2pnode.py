@@ -72,8 +72,9 @@ class MyOwnPeer2PeerNode(Node):
             
             self.spread_change(node, data)
             self.chain.add_foreign_block(data)
-            if  self.chain.blocks[-1].header['hash'] ==  data['header']['hash']:
-                self.spread_change(node, data)
+            # if self.chain.blocks[-1].header['hash'] ==  data['header']['hash']:
+            #     print("WE SPREAD")
+            #     self.spread_change(node, data)
 
 
         else:

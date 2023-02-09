@@ -157,8 +157,8 @@ class Chain():
         # print(self.pool)
         self.add_receiver(receiver)
         
-        message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tProcess started to add data to the chain. May take up to 10 minutes.'
-        self.status_callback(message)
+        # message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tProcess started to add data to the chain. May take up to 10 minutes.'
+        # self.status_callback(message)
         
         if len(self.pool) == 4:
             self.mine
