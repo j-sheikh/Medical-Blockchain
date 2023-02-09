@@ -69,7 +69,8 @@ class MyOwnPeer2PeerNode(Node):
     def node_message(self, node, data):
                          
         if(type(data) is dict):
-        
+            
+            self.spread_change(node, data)
             self.chain.add_foreign_block(data)
             if  self.chain.blocks[-1].header['hash'] ==  data['header']['hash']:
                 self.spread_change(node, data)

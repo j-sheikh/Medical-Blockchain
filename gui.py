@@ -26,6 +26,7 @@ import socket
 import re
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
+import struct
 
 gitkey_path = r'C:\Users\janni\Documents\Stuff\git_blockchain.txt'
 class SharingDoc:
@@ -50,17 +51,28 @@ class SharingDoc:
 
     def spread_block(self, block):  
         
+        
+        def pack_data(data):
+            print(data)
+            packed_data = struct.pack('>s', data)
+            return packed_data
+        
         #have to transform private_key to pem 
         #and have to transform encrypted data to string
         print("SPREAD BLOCK START")
         print(block.body)
+        #         print("packed_data")
+        #         print(packed_data)
         for rec, data in block.body.items():
             if isinstance(data, bytes):
                 print("IS BYTE")
-                hex_encoded_data = data.hex()
-                print(hex_encoded_data)
-                
-                block.body[rec] = 'Bier'
+        #         # data = b'\xcb\x9a\xf0\xa4\x1b\x8c\xe6v\xfc\rV\t\xed\xf7\xae \x181\xe4k\xdc\xbc\xf2\xc2\x13\xf7B\xb9\x93\x10\xfdn\xaeNm\xd6\xb2Qa\x91T\xa1,)\xc3\xa0\x14\x15CC\xf4\xa64\x05\xab\xf1\x96\xe1\xc6\xfc\x8f\x93TB\xad\xcd\x92\xd1_\xc7\xcf\x8f(\xd8u\xdb<\x98\x0c\xe5L\xf4\x8b\xc7\xe8\x968\x8d\xb9\xed\xdc)T\xba\xde7\x0e8\xa8\xd6t\xabnh\x9dX\x84V\xd90"(\xe5\x03@ma\xf3U\x04\xe5\xa0\x9aF\xdby\x97'
+        #         # hex_encoded_data = data.hex()
+        #         # print(hex_encoded_data)
+                packed_data =  pack_data(data)
+        #         print("packed_data")
+        #         print(packed_data)
+                block.body[rec] =  f'{packed_data.hex()'}
         print("TRANSFORMED DATA")
         print(block.body)
         for rec, data in block.body.items():
