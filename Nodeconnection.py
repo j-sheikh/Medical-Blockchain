@@ -144,6 +144,11 @@ class NodeConnection(threading.Thread):
 
         elif isinstance(data, dict):
             print("DICT")
+            # for k, v in data.items():
+            #     print(type(k), type(v))
+            #     for k1, v1 in v.items():
+            #         print(type(k1), type(v1))
+            #         print(k1, v1)
             try:
                 if compression == 'none':
                     self.sock.sendall(json.dumps(data).encode(encoding_type) + self.EOT_CHAR)

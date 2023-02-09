@@ -142,7 +142,7 @@ class Node(threading.Thread):
             print('IN SEND TO NODE IN NODE CLASS')
             print(type(data))
             n.send(data, compression=compression)
-            print(" NOW IT SEND IT IN NODE CLASS; WOWOWOWOWOW")
+            print("NOW IT SEND IT IN NODE CLASS")
 
         else:
             self.debug_print("Node send_to_node: Could not send the data, node is not found!")

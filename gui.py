@@ -52,10 +52,26 @@ class SharingDoc:
         
         #have to transform private_key to pem 
         #and have to transform encrypted data to string
-    
+        print("SPREAD BLOCK START")
+        print(block.body)
+        for rec, data in block.body.items():
+            if isinstance(data, bytes):
+                print("IS BYTE")
+                hex_encoded_data = data.hex()
+                print(hex_encoded_data)
+                
+                block.body[rec] = 'Bier'
+        print("TRANSFORMED DATA")
+        print(block.body)
+        for rec, data in block.body.items():
+            print(rec, type(rec))
+            print(data, type(data))
+        
+        
         string_rec = []
         for rec in block.header['receiver']:
             if isinstance(rec, rsa.PublicKey):
+                print(True)
                 pem = rec.public_bytes(
                     encoding=serialization.Encoding.PEM,
                     format=serialization.PublicFormat.SubjectPublicKeyInfo
@@ -65,19 +81,12 @@ class SharingDoc:
             else:
                 string_rec.append(rec)
                 
-        block.header['receiver'] = string_rec
         
-        
-        
-        for key in block.body:
-            if isinstance(block.body[key], bytes):
-                print("IS BYTE")
-                base64_encoded_data = base64.b64encode(block.body[key]).decode('utf-8')
-                block.body[key] = 'BYTES:' + base64_encoded_data
+        new_block_dict = {'header': block.header, 'body': block.body}
 
-             
-        new_block_dict = {'header': block.header, 'body': block.body}   
+        
         self.node.node_message(self.node, new_block_dict)
+
 
     def status_adding_data(self, message):
         print(message)
@@ -129,12 +138,20 @@ class SharingDoc:
             for k in b.body.keys():
                 if k in ['data', f'data_{self.pubkey}', 'data_ALL'] or pattern.match(k):
                     relevant_keys.append((b, k))
+                    
+                    
+        print(relevant_keys)
         current_key_index = 0
         def display_block(current_block):
             b, k = relevant_keys[current_block]
             value = b.body[k]
+            print("PRINT K")
+            print(k)
             if k == f'data_{self.pubkey}':
                 print('IT IS SELF_KEY')
+                print('VALUE')
+                print(value)
+                print(type(value))
                 decoded = rsa.decrypt(value, self.privkey)
                 print(decoded.decode('ascii'))
                 print(decoded.decode('utf-8'))

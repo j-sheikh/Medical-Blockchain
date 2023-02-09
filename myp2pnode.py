@@ -67,12 +67,8 @@ class MyOwnPeer2PeerNode(Node):
         print("outbound_node_disconnected: (" + self.id + "): " + node.id)
 
     def node_message(self, node, data):
-        # print('TYPE DATA')
-        # print(type(data))
-        # print(data)
                          
         if(type(data) is dict):
-            # print(True)
         
             self.chain.add_foreign_block(data)
             if  self.chain.blocks[-1].header['hash'] ==  data['header']['hash']:
@@ -80,8 +76,6 @@ class MyOwnPeer2PeerNode(Node):
 
 
         else:
-            # print(node)
-            # print(node.id)
             if self.message_callback:
                 self.message_callback(node, data)
       

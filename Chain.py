@@ -98,12 +98,15 @@ class Chain():
        
         block['header']['receiver'] = recover_rec
         
-        
-        for key in block['body']:
-            if block['body'][key].startswith('BYTES:'):
-                base64_encoded_data = block['body'][key][6:]
-                decoded_bytes = base64.b64decode(base64_encoded_data)
-                block['body'][key] = decoded_bytes
+                
+        for rec, data in block['body'].items():  
+            data = block['body'][rec]
+            try:
+                decoded_data = bytes.fromhex(data)
+                block['body'][rec] = decoded_data
+            except ValueError:
+                block['body'][rec] = data
+           
         
         recover_block = Block(block['header'], block['body'], recover = True)
         if(recover_block.header['hash'] != self.blocks[-1].header['hash']):
