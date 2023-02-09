@@ -72,7 +72,7 @@ class SharingDoc:
                 packed_data =  pack_data(data)
         #         print("packed_data")
         #         print(packed_data)
-                block.body[rec] =  f'{packed_data.hex()'}
+                block.body[rec] =  f'{packed_data.hex()}'
         print("TRANSFORMED DATA")
         print(block.body)
         for rec, data in block.body.items():
