@@ -19,7 +19,6 @@ class MyOwnPeer2PeerNode(Node):
         self.connected_users = {}
         
         self.message_callback = None
-        # self.message_callback_block = None
         
         self.message_inbound_callback = None
         self.message_inbound_disconnect_callback = None
@@ -35,9 +34,6 @@ class MyOwnPeer2PeerNode(Node):
     def set_message_callback(self, callback):
         self.message_callback = callback
         
-    # def set_foreign_block_message_callback(self, callback):
-    #     self.message_callback_block = callback    
-
     def set_message_inbound(self, callback):
         self.message_inbound_callback = callback
     
@@ -62,21 +58,17 @@ class MyOwnPeer2PeerNode(Node):
 
     
     def outbound_node_disconnected(self, node):
-        
         del self.connected_users[node.id]
         print("outbound_node_disconnected: (" + self.id + "): " + node.id)
 
     def node_message(self, node, data):
-                         
+        """
+        Handels incoming messages. Here we speerate between a chat message and if the message is a new, foreign block which we want to append. 
+        """                      
         if(type(data) is dict):
             
             self.spread_change(node, data)
             self.chain.add_foreign_block(data)
-            # if self.chain.blocks[-1].header['hash'] ==  data['header']['hash']:
-            #     print("WE SPREAD")
-            #     self.spread_change(node, data)
-
-
         else:
             if self.message_callback:
                 self.message_callback(node, data)
@@ -88,16 +80,16 @@ class MyOwnPeer2PeerNode(Node):
         print("node is requested to stop (" + self.id + "): ")
         
     def node_send_private_message(self, data, username):
-                     
+        """
+        Send private message to a connected node.
+        """              
         i = 0
         for n in self.nodes_inbound:
             if n.id in username:
-                # print(n.id)
                 self.send_to_node(n, data)
                 i += 1
         for n in self.nodes_outbound:
             if n.id in username:
-                # print(n.id)
                 self.send_to_node(n, data)
                 i += 1
         if i == 0:
@@ -108,31 +100,16 @@ class MyOwnPeer2PeerNode(Node):
         print(f"YOU ARE CONNECTED WITH: {self.connected_users}.")
         
     def spread_change(self, transmitter, data, compression='none'):
-        # print('SPREAD')
-        # print('SELFID')
-        # print(self.id)
-        # print('TRANSMITTER')
-        # print(transmitter)
-        # text = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tA new block has been added to your chain.'
-        # new_received_block = self.chain.blocks[-1] 
-
-
-        
-        
+        """
+        Send new block to all connected nodes.
+        """
         if self.nodes_inbound:
-            # print('inbound')
             for n in self.nodes_inbound:
                 if (n.id != transmitter.id):
                     self.send_to_node(n, data)
         if self.nodes_outbound: 
-            # print('outbound')
             for n in self.nodes_outbound:
-                # print(n)
                 if (n.id != transmitter.id):
-                    print("WE ARE SENDING")
-                    # print(n.id)
-                    # self.send_to_node(n, 'here is a new block')
-                    # print(data)
                     self.send_to_node(n, data) 
                     
    

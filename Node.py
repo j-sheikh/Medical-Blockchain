@@ -239,11 +239,6 @@ class Node(threading.Thread):
         else:
             self.debug_print("Node disconnect_with_node: cannot disconnect with a node with which we are not connected.")
             
-            
-        # if node in self.nodes_outbound:
-        #     print(True)
-        #     self.node_disconnect_with_outbound_node(node)
-        #     node.stop()
 
 
     def stop(self):

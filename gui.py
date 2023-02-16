@@ -29,6 +29,7 @@ from cryptography.hazmat.primitives import serialization
 import struct
 
 gitkey_path = r'C:\Users\janni\Documents\Stuff\git_blockchain.txt'
+
 class SharingDoc:
     def __init__(self, sys_argv):
         self.root = tk.Tk()
@@ -50,30 +51,20 @@ class SharingDoc:
      
 
     def spread_block(self, block):  
-        
-        
-        #have to transform private_key to pem 
-        #and have to transform encrypted data to string
-        print("SPREAD BLOCK START")
-        print(block.body)
+        """
+        If the received message is a block. We need to transform the Block into a dictionary.
+        We also have transform the public key to a string, as well as the encrypted data. 
+        Otherwise the network won't be able to send the message/data.
+        """
+      
         for rec, data in block.body.items():
             if isinstance(data, bytes):
-                print("IS BYTE")
                 hex_encoded_data = data.hex()
-                print(hex_encoded_data)
-
                 block.body[rec] =  f'{hex_encoded_data}'
-        print("TRANSFORMED DATA")
-        print(block.body)
-        for rec, data in block.body.items():
-            print(rec, type(rec))
-            print(data, type(data))
-        
-        
+  
         string_rec = []
         for rec in block.header['receiver']:
             if isinstance(rec, rsa.PublicKey):
-                print(True)
                 pem = rec.public_bytes(
                     encoding=serialization.Encoding.PEM,
                     format=serialization.PublicFormat.SubjectPublicKeyInfo
@@ -91,7 +82,6 @@ class SharingDoc:
 
 
     def status_adding_data(self, message):
-        print(message)
         self.text_area.insert(tk.END, message)
    
     def share_pubkey(self):
@@ -112,7 +102,9 @@ class SharingDoc:
 
 
     def chain_data(self, blocks):
-        
+        """
+        Print Chain
+        """
         start_message = '\n\n################################PRINT CHAIN START###############################\n\n'
         end_message = '\n\n################################PRINT CHAIN END#################################\n\n'
         self.text_area.insert(tk.END, start_message)
@@ -123,6 +115,10 @@ class SharingDoc:
         
     def get_my_data(self, blocks):
         
+        """
+        Seach each Block in Blockchain. If ALL or the public key of the logged in user is in recvers. 
+        Get the block position. If message was encrypted, decrypt with public key.
+        """
            
         view_data_window = tk.Toplevel(main_window)
         view_data_window.lift()
@@ -142,24 +138,14 @@ class SharingDoc:
                     relevant_keys.append((b, k))
                     
                     
-        print(relevant_keys)
         current_key_index = 0
         def display_block(current_block):
             b, k = relevant_keys[current_block]
             value = b.body[k]
-            print("PRINT K")
-            print(k)
             if k == f'data_{self.pubkey}':
-                print('IT IS SELF_KEY')
-                print('VALUE')
-                print(value)
-                print(type(value))
                 decoded = rsa.decrypt(value, self.privkey)
-                print(decoded.decode('ascii'))
-                print(decoded.decode('utf-8'))
                 message = f"\n\n================\n\nAdded: {b.header['timestamp']}\n{decoded.decode('ascii')}"
             else:
-                print('IT IS NOT SELF_KEY')
                 message = f"\n\n================\n\nAdded: {b.header['timestamp']}\n{value}"
 
             message_entry.delete("1.0", tk.END)
@@ -206,6 +192,9 @@ class SharingDoc:
         self.root.mainloop()
       
     def build_login_gui(self):
+        """
+        Login GUI. Calls the login function.
+        """
         global login_window
         login_window = tk.Toplevel(self.root)
         login_window.lift()
@@ -599,6 +588,9 @@ class SharingDoc:
     
     
     def signup(self):
+        """
+        SignUP System
+        """
         
         # create a new window
         global sp_window
@@ -665,7 +657,7 @@ class SharingDoc:
         confirm_password_entry.bind("<KeyRelease>", lambda event: check_password_match(password_entry.get(), confirm_password_entry.get()))
         
         # create security question answer input boxes and match label
-        security_question_answer_label = tk.Label(sp_window, text="Answer:")
+        security_question_answer_label = tk.Label(sp_window, text="Security Question:\nWhat is your first pet's name?\nAnswer:")
         security_question_answer_entry = tk.Entry(sp_window, show="*")
         confirm_security_question_answer_label = tk.Label(sp_window, text="Confirm Answer:")
         confirm_security_question_answer_entry = tk.Entry(sp_window, show="*")
@@ -675,7 +667,6 @@ class SharingDoc:
         confirm_security_question_answer_entry.bind("<KeyRelease>", lambda event: check_security_question_answer_match(security_question_answer_entry.get(), confirm_security_question_answer_entry.get()))
         
         # display
-        
         username_label.pack()
         username_entry.pack()
         username_availability_label.pack()
@@ -691,7 +682,7 @@ class SharingDoc:
         confirm_security_question_answer_label.pack()
         confirm_security_question_answer_entry.pack()
         security_question_answer_match_label.pack()
-        
+    
         # save userdata to user_dict
         def save_userdata(username, password, security_question):
             salt = os.urandom(32)
@@ -729,8 +720,8 @@ class SharingDoc:
             tk.messagebox.showinfo("Info", "You have successfully signed up.")
             time.sleep(2)
             self.load_user_dict_git()
-            # self.load_user_dict()
             sp_window.destroy()
+            
         # create the "Save" button and set it to be hidden by default
         save_button = tk.Button(sp_window, text="Save", state="disabled", command= lambda: save_userdata(username_entry.get(), password_entry.get(), security_question_answer_entry.get()))
         
@@ -752,7 +743,9 @@ class SharingDoc:
     
     
     def login(self):
-        
+        """
+        Login System
+        """
         uname = self.username_entry.get()
         password = self.password_entry.get()
         
@@ -782,7 +775,6 @@ class SharingDoc:
             key = self.user_dict[uname]['key_pw']
             new_key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
             if key != new_key:
-                # self.username_entry.delete(0, 'end')
                 self.password_entry.delete(0, 'end')
                 tk.messagebox.showerror("Login", "Incorrect password", parent=login_window)
                 
@@ -801,7 +793,6 @@ class SharingDoc:
                 self.node.set_message_callback(self.receive_message)
                 self.node.set_message_inbound(self.inbound_message)
                 self.node.set_message_inbound_disconnect(self.inbound_disconnect_message)
-                # self.node.set_foreign_block_message_callback(self.foreign_block)
                 
                 
                 self.node.chain.set_message_callback(self.chain_data)
@@ -811,51 +802,12 @@ class SharingDoc:
                 
                 
                 self.build_main_gui()
-
-    # def disconnect(self):
-                    
-    #     disconnect_window = tk.Toplevel(main_window)
-    #     disconnect_window.lift()
-    #     disconnect_window.attributes("-topmost", True)
-    #     disconnect_window.title("Disconnect with other node")
-    #     disconnect_window.geometry("400x400")
-        
-    #     checkbox_vars = []
-
-    #     for key in self.node.connected_users.keys():
-    #         checkbox_var = tk.IntVar()
-    #         checkbox_vars.append(checkbox_var)
-    #         tk.Checkbutton(disconnect_window, text=key, variable=checkbox_var).pack()
-
-    #     def get_receivers():
-    #         receivers = []
-
-    #         for i, key in enumerate(self.node.connected_users.keys()):
-    #             if checkbox_vars[i].get() == 1:
-    #                 receivers.append(key)
-    #         return receivers
-
-    #     disconnect_button = tk.Button(disconnect_window, text="Disconnect", state = "disabled", command=lambda: (self.node.disconnect_with_node(get_receivers()),
-    #                                                                                                self.text_area.insert(tk.END, f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tYou are now disconnected with: {i for i in get_receivers()}'),
-    #                                                                                                disconnect_window.destroy()))
-
-    #     def validate():
-    #         if len(get_receivers()) == 0:
-    #             disconnect_button.config(state="disabled")
-    #         else:
-    #             disconnect_button.config(state="normal")
-
-        
-    #     for checkbox_var in checkbox_vars:
-    #         checkbox_var.trace("w", lambda *args: validate())
-    #     disconnect_button.pack()
-
-        
+       
 
     def connect(self):
-        
-
-            
+        """
+        Connect with another, active node.
+        """          
         connect_window = tk.Toplevel(main_window)
         connect_window.lift()
         connect_window.attributes("-topmost", True)
@@ -909,8 +861,6 @@ class SharingDoc:
         main_window.destroy()
         time.sleep(3)
         os.execl(sys.executable, sys.executable, *sys.argv)
-
-        # self.main()
                 
     def load_private_key(self):
         with open('keys/private.pem', mode='rb') as privatefile:
@@ -927,7 +877,7 @@ class SharingDoc:
 
         with open('users.pickle', 'wb') as f:
             pickle.dump(self.user_dict, f, protocol=pickle.HIGHEST_PROTOCOL)  
-     
+
     def load_user_dict(self):
         try:
             with open('users.pickle', 'rb') as f:

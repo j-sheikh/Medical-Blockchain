@@ -18,7 +18,6 @@ class Chain():
         self.receiver_pool = []
         self.blocks = []
         self.pubkey = None
-        # self.blockchain = []
         self.create_origin_block()
         
         self.message_callback = None
@@ -51,29 +50,19 @@ class Chain():
         
     def add_to_chain(self, block):
         if self.proof_of_work(block):
-                       
-
-            # self.blockchain.append(block)
-            self.blocks.append(block)
-            
             if self.status_callback:
                 message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tData added to chain.'
-                self.status_callback(message)
-                
+                self.status_callback(message)          
+
+            self.blocks.append(block)
+                   
             if self.add_block_callback:
                 self.add_block_callback(block)
             
             #reset pools
             self.receiver_pool = []
             self.pool = []
-            # print('DATA added to CHAIN!')
-            # self.chain_changed
 
-        else:
-            if self.status_callback:
-                message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tFailed to add data to chain. Reason: Proof of work not correct.'
-                self.message_callback(message)
-            # print('Proof of work not correct!')
             
             
     def check_block(self, block_index):
@@ -114,8 +103,8 @@ class Chain():
                 print("added")
                 self.blocks.append(recover_block)
                 if self.status_callback:
-                    message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tForeign block is added.'
-                    self.set_satus_callback(message)
+                    message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tNew data was added to your chain.'
+                    self.status_callback(message)          
             else:
                 print('FOREIGN BLOCK PROOF OF WORK FAILED')
         else:
@@ -154,11 +143,10 @@ class Chain():
         else:    
             self.pool = self.pool + data
       
-        # print(self.pool)
         self.add_receiver(receiver)
         
-        # message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tProcess started to add data to the chain. May take up to 10 minutes.'
-        # self.status_callback(message)
+        message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tProcess started to add data to the chain. May take up to 10 minutes.'
+        self.status_callback(message)
         
         if len(self.pool) == 4:
             self.mine
@@ -186,31 +174,17 @@ class Chain():
 
 
     def search_chain_for_data(self):
-        # print("SEARCHING")
-        # print(self.pubkey)
+
         blocks = []
         for _, block in enumerate(self.blocks):
-            # print(block.header['receiver'])
             if f'{self.pubkey}' in block.header['receiver'] or 'ALL' in block.header['receiver']:
                 if block not in blocks:
                     blocks.append(block)
-        # print(len(blocks))
+
         if self.my_data_callback and blocks:
 
             self.my_data_callback(blocks)
 
-    # def get_chain_data(self, idx):
-    #     return self.blocks[idx]
-
-    
-    # def print_block(self, block):
-    #     if self.message_callback:
-    #         self.message_callback(block)
-            
-            # print("\n\n=============================")
-            # print(f"Header:\t\t{block.header}")
-            # print(f"Body:\t{block.body}")
-            # print("\n\n=============================")
 
 
         
@@ -218,11 +192,9 @@ class Chain():
         
         #sanity check
         if len(self.pool) > 0:
-            # print('\nMINE')
-            # print("LEN POOL", len(self.pool))
             
+            #stop timer
             rt.stop()
-            # print('repeater stopped')
             
 
             block = Block(self.pool, self.blocks[-1].header['hash'], self.receiver_pool, timestamp= time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time())))
@@ -231,12 +203,7 @@ class Chain():
             if block.Merkle_Tree.check_merkle_root:
                         
                 self.add_to_chain(block)     
-            
-            else:
-                if self.status_callback:
-                    message = f'\n{time.strftime("%Y-%m-%d %H:%M:%S UTC+0", time.gmtime(time.time()))}\tFailed to add data to pool. Reason: Merkle root did not match.'
-                    self.status_callback(message)
-                # print('merkle_root failed.')        
+
             
             
         else:
