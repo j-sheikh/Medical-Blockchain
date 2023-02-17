@@ -57,6 +57,7 @@ matplotlib-inline @ file:///C:/ci/matplotlib-inline_1661934094726/work
 mccabe @ file:///opt/conda/conda-bld/mccabe_1644221741721/work
 mistune @ file:///C:/ci_310/mistune_1642084168466/work
 mypy-extensions==0.4.3
+Naked==0.1.32
 nbclient @ file:///C:/ci/nbclient_1650308592199/work
 nbconvert @ file:///C:/b/abs_4av3q4okro/croot/nbconvert_1668450658054/work
 nbformat @ file:///C:/b/abs_85_3g7dkt4/croot/nbformat_1670352343720/work
@@ -83,6 +84,7 @@ ptyprocess @ file:///tmp/build/80754af9/ptyprocess_1609355006118/work/dist/ptypr
 pyasn1==0.4.8
 pycodestyle @ file:///tmp/build/80754af9/pycodestyle_1636635402688/work
 pycparser @ file:///tmp/build/80754af9/pycparser_1636541352034/work
+pycryptodome==3.17
 pydocstyle @ file:///C:/b/abs_6dz687_5i3/croot/pydocstyle_1675221688656/work
 pyflakes @ file:///tmp/build/80754af9/pyflakes_1636644436481/work
 Pygments @ file:///opt/conda/conda-bld/pygments_1644249106324/work
@@ -114,6 +116,7 @@ requests @ file:///C:/ci/requests_1657735340829/work
 rope @ file:///opt/conda/conda-bld/rope_1643788605236/work
 rsa==4.9
 Rtree @ file:///C:/b/abs_e116ltblik/croot/rtree_1675157871717/work
+shellescape==3.8.1
 sip @ file:///C:/Windows/Temp/abs_b8fxd17m2u/croots/recipe/sip_1659012372737/work
 six @ file:///tmp/build/80754af9/six_1644875935023/work
 snowballstemmer @ file:///tmp/build/80754af9/snowballstemmer_1637937080595/work
