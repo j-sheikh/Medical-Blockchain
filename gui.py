@@ -143,8 +143,12 @@ class SharingDoc:
             b, k = relevant_keys[current_block]
             value = b.body[k]
             if k == f'data_{self.pubkey}':
-                decoded = rsa.decrypt(value, self.privkey)
-                message = f"\n\n================\n\nAdded: {b.header['timestamp']}\n{decoded.decode('ascii')}"
+                try:
+                    decoded = rsa.decrypt(value, self.privkey)
+                    message = f"\n\n================\n\nAdded: {b.header['timestamp']}\n{decoded.decode('ascii')}"
+                except:
+                    decoded = rsa.decrypt(value, self.privkey)
+                    message = f"\n\n================\n\nAdded: {b.header['timestamp']}\n{decoded.decode('utf-8')}"
             else:
                 message = f"\n\n================\n\nAdded: {b.header['timestamp']}\n{value}"
 
@@ -783,7 +787,7 @@ class SharingDoc:
                 self.user = uname
                 self.load_private_key()
                 self.load_public_key()
-                self.load_user_dict()
+                self.load_user_dict_git()
                 tk.messagebox.showinfo("Login", "Login successful", parent=login_window)
                 login_window.destroy()
                 self.node = MyOwnPeer2PeerNode(self.ip, self.port, self.user)
